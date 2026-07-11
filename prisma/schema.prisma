@@ -1,0 +1,109 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  email        String
+  passwordHash String   @map("password_hash")
+  role         String   @default("ADMIN") // SUPER_ADMIN or ADMIN
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model Hymn {
+  id          Int      @id @default(autoincrement())
+  hymnNumber  Int      @map("hymn_number")
+  title       String
+  lyrics      String
+  chorus      String?
+  category    String
+  language    String   @default("English")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("hymns")
+}
+
+model Announcement {
+  id         Int       @id @default(autoincrement())
+  title      String
+  body       String
+  date       String?
+  priority   String    @default("MEDIUM") // LOW, MEDIUM, HIGH
+  expiryDate String?   @map("expiry_date")
+  status     String    @default("PUBLISHED") // DRAFT, PUBLISHED
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@map("announcements")
+}
+
+model Citation {
+  id          Int      @id @default(autoincrement())
+  book        String
+  chapter     Int
+  verse       String
+  displayText String   @map("display_text")
+  notes       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("citations")
+}
+
+model CustomMessage {
+  id        Int      @id @default(autoincrement())
+  type      String   // WELCOME, OFFERING, COMMUNION, PRAYER_POINTS, CLOSING, SPECIAL_PROGRAM
+  title     String
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("custom_messages")
+}
+
+model CurrentDisplay {
+  id          Int      @id @default(1)
+  displayType String   @map("display_type") // HYMN, ANNOUNCEMENT, CITATION, MESSAGE
+  recordId    Int      @map("record_id")
+  lastUpdated DateTime @default(now()) @map("last_updated")
+  status      String   @default("PUBLISHED")
+
+  @@map("current_displays")
+}
+
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  username  String
+  details   String
+  timestamp DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
+
+model DisplayHistory {
+  id          Int      @id @default(autoincrement())
+  displayType String   @map("display_type")
+  recordId    Int      @map("record_id")
+  title       String
+  displayedAt DateTime @default(now()) @map("displayed_at")
+
+  @@map("display_histories")
+}

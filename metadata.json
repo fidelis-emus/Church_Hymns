@@ -1,0 +1,8 @@
+{
+  "name": "Church QR Hymn Display System",
+  "description": "A secure, production-ready Church QR Hymn Display System that allows administrators to instantly broadcast hymns, announcements, Bible citations, and church content on members' phones in real-time.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
