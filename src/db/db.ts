@@ -2,11 +2,15 @@ import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
 import { generateSeedHymns } from './seed_hymns.ts';
 import { 
   User, UserRole, Hymn, Announcement, Citation, 
   CustomMessage, CurrentDisplay, ActivityLog, DisplayHistory, ChurchSettings 
 } from '../types.ts';
+
+// Load environment variables immediately
+dotenv.config();
 
 const { Pool } = pg;
 
@@ -163,27 +167,21 @@ export async function initDb() {
           );
         }
 
-        // Seed hymns if fewer than 2000 exist
+        // Seed hymns if table is empty
         const hymnsCheck = await client.query('SELECT COUNT(*) FROM hymns');
         const hymnsCount = parseInt(hymnsCheck.rows[0].count);
-        if (hymnsCount < 2000) {
-          console.log(`PostgreSQL: Found ${hymnsCount} hymns. Seeding missing hymns to reach 2,000+...`);
+        if (hymnsCount === 0) {
+          console.log('PostgreSQL: Hymns table is empty. Seeding 2,000 hymns...');
           const seedHymns = generateSeedHymns();
+          const totalToImport = seedHymns.length;
           
-          // Get already existing hymn numbers
-          const existingRes = await client.query('SELECT hymn_number FROM hymns');
-          const existingNumbers = new Set(existingRes.rows.map((r: any) => r.hymn_number));
-          
-          // Filter to only those that are missing
-          const missingHymns = seedHymns.filter(h => !existingNumbers.has(h.hymnNumber));
-          
-          if (missingHymns.length > 0) {
-            console.log(`PostgreSQL: Inserting ${missingHymns.length} missing hymns in bulk...`);
+          if (seedHymns.length > 0) {
+            console.log(`PostgreSQL: Inserting ${seedHymns.length} hymns in bulk...`);
             
             // Insert in batches of 200 to prevent parameter limit issues and ensure high speed
             const batchSize = 200;
-            for (let i = 0; i < missingHymns.length; i += batchSize) {
-              const batch = missingHymns.slice(i, i + batchSize);
+            for (let i = 0; i < seedHymns.length; i += batchSize) {
+              const batch = seedHymns.slice(i, i + batchSize);
               
               const valueClauses: string[] = [];
               const params: any[] = [];
@@ -197,7 +195,7 @@ export async function initDb() {
               const bulkQuery = `INSERT INTO hymns (hymn_number, title, lyrics, chorus, category, language) VALUES ${valueClauses.join(', ')}`;
               await client.query(bulkQuery, params);
             }
-            console.log(`PostgreSQL: Bulk insertion completed successfully!`);
+            console.log(`PostgreSQL: Successfully seeded all ${totalToImport} hymns!`);
           }
         }
 
