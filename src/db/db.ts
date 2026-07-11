@@ -42,9 +42,10 @@ const DEFAULT_SETTINGS: ChurchSettings = {
 // Initialize connection pool
 if (dbUrl) {
   console.log('PostgreSQL DATABASE_URL found. Initializing PostgreSQL Pool...');
+  const useSsl = !dbUrl.includes('localhost') && !dbUrl.includes('127.0.0.1') && !dbUrl.includes('::1');
   pool = new Pool({
     connectionString: dbUrl,
-    ssl: dbUrl.includes('render.com') || dbUrl.includes('neon.tech') ? { rejectUnauthorized: false } : false,
+    ssl: useSsl ? { rejectUnauthorized: false } : false,
     connectionTimeoutMillis: 10000,
   });
   
@@ -327,12 +328,44 @@ export async function initDb() {
 
 // Read JSON Helper
 function readLocalJson(): any {
+  const defaultObj = {
+    users: [],
+    hymns: [],
+    announcements: [],
+    citations: [],
+    custom_messages: [],
+    activity_logs: [],
+    display_histories: [],
+    settings: { branding_settings: DEFAULT_SETTINGS },
+    current_display: { displayType: 'WELCOME_SLIDE', recordId: 0, status: 'PUBLISHED', lastUpdated: new Date().toISOString() }
+  };
+
   try {
+    if (!fs.existsSync(LOCAL_DB_PATH)) {
+      return defaultObj;
+    }
     const raw = fs.readFileSync(LOCAL_DB_PATH, 'utf-8');
-    return JSON.parse(raw);
+    if (!raw || raw.trim() === '') {
+      return defaultObj;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return defaultObj;
+    }
+    return {
+      users: Array.isArray(parsed.users) ? parsed.users : [],
+      hymns: Array.isArray(parsed.hymns) ? parsed.hymns : [],
+      announcements: Array.isArray(parsed.announcements) ? parsed.announcements : [],
+      citations: Array.isArray(parsed.citations) ? parsed.citations : [],
+      custom_messages: Array.isArray(parsed.custom_messages) ? parsed.custom_messages : [],
+      activity_logs: Array.isArray(parsed.activity_logs) ? parsed.activity_logs : [],
+      display_histories: Array.isArray(parsed.display_histories) ? parsed.display_histories : [],
+      settings: parsed.settings && typeof parsed.settings === 'object' ? parsed.settings : { branding_settings: DEFAULT_SETTINGS },
+      current_display: parsed.current_display && typeof parsed.current_display === 'object' ? parsed.current_display : { displayType: 'WELCOME_SLIDE', recordId: 0, status: 'PUBLISHED', lastUpdated: new Date().toISOString() }
+    };
   } catch (err) {
     console.error('Error reading local JSON database:', err);
-    return {};
+    return defaultObj;
   }
 }
 
@@ -365,7 +398,8 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     };
   } else {
     const data = readLocalJson();
-    const user = data.users.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
+    const usersList = Array.isArray(data?.users) ? data.users : [];
+    const user = usersList.find((u: any) => u && u.username && u.username.toLowerCase() === username.toLowerCase());
     return user || null;
   }
 }
