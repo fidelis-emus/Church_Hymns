@@ -232,14 +232,6 @@ export default function App() {
               <span>{loggingIn ? 'Authenticating...' : 'Sign In to Pulpit'}</span>
             </button>
           </form>
-
-          {/* QUICK DEMO ASSISTANCE (HUMBLE AND HELPFUL) */}
-          <div className="border-t border-organic-border pt-4 text-center">
-            <p className="text-[11px] text-organic-olive/60 font-medium leading-relaxed">
-              Default system deployment seed accounts:<br />
-              <span className="font-mono bg-organic-bg px-1 py-0.5 rounded text-organic-olive/80">admin / admin123</span> or <span className="font-mono bg-organic-bg px-1 py-0.5 rounded text-organic-olive/80">superadmin / super123</span>
-            </p>
-          </div>
         </div>
 
         {/* EXTERNAL VIEW BUTTON FOR SCAN PREVIEW */}

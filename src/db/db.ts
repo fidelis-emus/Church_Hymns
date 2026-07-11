@@ -152,9 +152,9 @@ export async function initDb() {
         isPostgres = true;
         console.log('PostgreSQL schema migrations successfully verified!');
         
-        // Seed default admin if empty
-        const userCheck = await client.query('SELECT COUNT(*) FROM users');
-        if (parseInt(userCheck.rows[0].count) === 0) {
+        // Seed default admin if missing (case-insensitive)
+        const adminCheck = await client.query("SELECT COUNT(*) FROM users WHERE LOWER(username) = 'admin'");
+        if (parseInt(adminCheck.rows[0].count) === 0) {
           console.log('PostgreSQL: Seeding default admin user...');
           const adminPasswordHash = bcrypt.hashSync('admin123', 10);
           await client.query(
@@ -322,6 +322,31 @@ export async function initDb() {
 
       fs.writeFileSync(LOCAL_DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
       console.log('Local JSON Database seeded with 2,000 hymns, admins, and settings!');
+    } else {
+      // Ensure 'admin' user exists in JSON database so admin/admin123 works
+      try {
+        const data = readLocalJson();
+        const usersList = Array.isArray(data?.users) ? data.users : [];
+        const hasAdmin = usersList.some((u: any) => u && u.username && u.username.toLowerCase() === 'admin');
+        if (!hasAdmin) {
+          console.log('JSON Database: Seeding missing default admin user...');
+          const adminPasswordHash = bcrypt.hashSync('admin123', 10);
+          const nextId = usersList.length > 0 ? Math.max(...usersList.map((u: any) => u.id)) + 1 : 1;
+          usersList.push({
+            id: nextId,
+            username: 'admin',
+            email: 'admin@church.org',
+            passwordHash: adminPasswordHash,
+            role: UserRole.SUPER_ADMIN,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+          data.users = usersList;
+          writeLocalJson(data);
+        }
+      } catch (err) {
+        console.error('Failed to verify/seed admin in local JSON db:', err);
+      }
     }
   }
 }
@@ -384,7 +409,7 @@ function writeLocalJson(data: any) {
 
 export async function getUserByUsername(username: string): Promise<User | null> {
   if (isPostgres && pool) {
-    const res = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const res = await pool.query('SELECT * FROM users WHERE LOWER(username) = LOWER($1)', [username]);
     if (res.rows.length === 0) return null;
     const row = res.rows[0];
     return {
